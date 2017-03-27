@@ -10,4 +10,6 @@ RUN apk --update add ${APK_PACKAGES}
 
 COPY . .
 
+RUN ant
+
 CMD ["/usr/bin/java", "-version"]
