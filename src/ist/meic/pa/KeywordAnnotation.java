@@ -17,7 +17,7 @@ public class KeywordAnnotation {
     // Get defaults from super classes and stack them up
     while (currentClass != null) {
       try {
-        CtClass[] params = {KeywordClass.JAVA_LANG_OBJECT_ARRAY};
+        CtClass[] params = {ReflectionUtils.JAVA_LANG_OBJECT_ARRAY};
         CtConstructor constructor = currentClass.getDeclaredConstructor(params);
         KeywordArgs annotation = (KeywordArgs) constructor.getAnnotation(KeywordArgs.class);
         String att = annotation.value();

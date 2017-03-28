@@ -1,17 +1,10 @@
 package ist.meic.pa;
 
 import java.util.*;
-import java.io.IOException;
 import javassist.*;
+import java.io.IOException;
 
 public class KeywordClass {
-
-  // Useful helper class
-  protected static CtClass JAVA_LANG_OBJECT_ARRAY;
-  static {
-    try { JAVA_LANG_OBJECT_ARRAY = ClassPool.getDefault().get("java.lang.Object[]"); } 
-    catch (NotFoundException e) { Logger.error(e.getMessage()); }
-  }
 
   private String className;
   private ClassPool classPool;
@@ -23,6 +16,7 @@ public class KeywordClass {
     this.className = className;
     this.classPool = ClassPool.getDefault();
     this.classPool.importPackage("java.lang.reflect.Field");
+    this.classPool.importPackage("ist.meic.pa.ReflectionUtils");
     CtClass cc = this.classPool.get(className);    
     this.ctClass = cc;
   }
@@ -39,15 +33,30 @@ public class KeywordClass {
   }
 
   private void generateConstructor () throws NotFoundException, CannotCompileException {
-    CtClass[] params = {JAVA_LANG_OBJECT_ARRAY};
+    CtClass[] params = {ReflectionUtils.JAVA_LANG_OBJECT_ARRAY};
     CtConstructor constructor = this.ctClass.getDeclaredConstructor(params);
+
+    // Determine the need to initialize the super
+    String superCall = "";
+    try {
+      CtClass superClass = this.ctClass.getSuperclass();
+      CtConstructor superConstructor = superClass.getDeclaredConstructor(params);
+      KeywordArgs annotation = (KeywordArgs) superConstructor.getAnnotation(KeywordArgs.class);
+      if (annotation != null) {
+        superCall = "super(new Object[0]);";
+      }      
+    } catch (Exception e) {
+      superCall = "";
+    }
+
     constructor.setBody("{" + 
+      superCall +
       String.join(";", this.defaultParams) + ";" +
       "for(int i = 0; i < $1.length; i += 2) {" +
         "String fieldName = (String) $1[i];" +
         "java.lang.reflect.Field field = null;" +
         "try {" +
-          "field = " + this.ctClass.getName()  + ".class.getDeclaredField(fieldName);" +
+          "field = ist.meic.pa.ReflectionUtils.getField(" + this.ctClass.getName()  + ".class, fieldName);" +
         "} catch (NoSuchFieldException e) {" +
           "throw new RuntimeException(\"Unrecognized keyword: \" + fieldName);" +
         "}" +
