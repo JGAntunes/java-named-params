@@ -6,32 +6,35 @@ import javassist.bytecode.annotation.*;
 import java.util.regex.*;
 
 public class KeywordAnnotation {
-  private static final String PATTERN = "(\\w+)(?:=(\"[^\"]*\"|\\w*|\\d*))";
+  private static final String PATTERN = "(\\w+(?:=\"[^\"]*\"|[^,]+|\\d+))";
 
-  public static Map<String, String> parse (CtClass ctClass) {
-    HashMap<String, String> result = new HashMap<String, String> ();
+  public static List<String> parse (CtClass ctClass) {
+    List<String> result = new ArrayList<String> ();
     Stack<String> defaultStack = new Stack<String> ();
     CtClass currentClass = ctClass;
- 
+
+    Logger.info("Processing class " + ctClass.getName()); 
     // Get defaults from super classes and stack them up
     while (currentClass != null) {
       try {
-        CtConstructor[] constructors = currentClass.getDeclaredConstructors();
-        Annotation an = null;
-        for (CtConstructor c : constructors) {
-          an = (Annotation) c.getAnnotation(KeywordArgs.class);
-          if (an != null) {
-            break;
-          }
-        }  
-        String att = ((StringMemberValue)an.getMemberValue("value")).getValue();
+        CtClass[] params = {KeywordClass.JAVA_LANG_OBJECT_ARRAY};
+        CtConstructor constructor = currentClass.getDeclaredConstructor(params);
+        KeywordArgs annotation = (KeywordArgs) constructor.getAnnotation(KeywordArgs.class);
+        String att = annotation.value();
         defaultStack.push(att);
+      } catch (NullPointerException | NotFoundException e) {
+        // Accessing the annotation attribute will sometimes throw this
+        // only consider it if not null and usefull
+        if (e.getMessage() != null) {
+	  Logger.warn("Processing " +  currentClass.getName() + " " + e.getMessage());
+	}
       } catch (Exception e) {
-        System.err.println(e.getMessage());
+        Logger.error(e.getMessage());
       }
       try {
         currentClass = currentClass.getSuperclass();
-      } catch (Exception e) {
+      } catch (NotFoundException e) {
+        // No super class, we can break the loop
         break;
       }
     }
@@ -41,9 +44,8 @@ public class KeywordAnnotation {
     while (!defaultStack.empty()) {
       Matcher m = p.matcher(defaultStack.pop());
       while (m.find()) {
-        String key = m.group(1);
-        String value = m.group(2);
-        result.put(key, value);
+        String value = m.group(1);
+        result.add(value);
       }
     }
     return result;
