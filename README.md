@@ -2,7 +2,7 @@
 A Java extension to add support for named params, a project for Advanced Programming class @ IST
 
 ## The idea
-```
+```java
 class Widget {
   int width;
   int height;
@@ -21,7 +21,7 @@ new Widget("width", 100, "height", 50, "margin", 5)
 ```
 
 ## Compatible with subclasses
-```
+```java
 class ExtendedWidget extends Widget {
 
   String name;
